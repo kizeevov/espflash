@@ -507,6 +507,31 @@ impl Flasher {
         )
     }
 
+    pub fn load_bin_to_flash_addr(&mut self, addr: u32,  data: &[u8]) -> Result<(), Error> {
+        let mut target = self.chip.flash_target(self.spi_params);
+
+        self.connection.command(Command::FlashBegin {
+            size: 0,
+            blocks: 0,
+            block_size: FLASH_WRITE_SIZE as u32,
+            offset: 0,
+            supports_encryption: false,
+        })?;
+
+        let segment = RomSegment {
+            addr,
+            data: Cow::from(data)
+        };
+
+        target
+            .write_segment(&mut self.connection, segment)
+            .flashing()?;
+
+        target.finish(&mut self.connection, true).flashing()?;
+
+        Ok(())
+    }
+
     pub fn change_baud(&mut self, speed: u32) -> Result<(), Error> {
         self.connection
             .with_timeout(CommandType::ChangeBaud.timeout(), |connection| {
